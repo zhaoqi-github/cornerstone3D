@@ -47,7 +47,7 @@ export function fillStackSegmentationWithMockData({
         if (distanceFromCenter < innerRadius) {
           voxelManager.setAtIndex(voxelIndex, innerValue);
         } else if (distanceFromCenter < outerRadius) {
-          voxelManager.setAtIndex(voxelIndex, outerValue);
+          // voxelManager.setAtIndex(voxelIndex, outerValue);
         }
         voxelIndex++;
       }

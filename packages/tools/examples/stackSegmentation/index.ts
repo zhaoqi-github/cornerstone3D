@@ -31,6 +31,7 @@ const {
   segmentation,
   utilities: cstUtils,
 } = cornerstoneTools;
+const { cache } = cornerstone;
 
 const { MouseBindings, KeyboardBindings } = csToolsEnums;
 const { ViewportType } = Enums;
@@ -53,23 +54,18 @@ const content = document.getElementById('content');
 const viewportGrid = document.createElement('div');
 
 viewportGrid.style.display = 'flex';
-viewportGrid.style.display = 'flex';
 viewportGrid.style.flexDirection = 'row';
 
 const element1 = document.createElement('div');
 element1.oncontextmenu = () => false;
-
 element1.style.width = size;
 element1.style.height = size;
-
 viewportGrid.appendChild(element1);
 
 const element2 = document.createElement('div');
 element2.oncontextmenu = () => false;
-
 element2.style.width = size;
 element2.style.height = size;
-
 viewportGrid.appendChild(element2);
 
 content.appendChild(viewportGrid);
@@ -81,7 +77,6 @@ instructions.innerText = `
   Right Click: Zoom
   Mouse wheel: Scroll Stack
   `;
-
 content.append(instructions);
 
 const brushInstanceNames = {
@@ -232,6 +227,85 @@ addButtonToToolbar({
 
     // update the dropdown
     updateSegmentationDropdownOptions(segmentationIds, newSegmentationId);
+  },
+});
+
+function exportSegmentation() {
+  if (!segmentationIds.length) {
+    return;
+  }
+
+  // Get active segmentation
+  const activeSegmentation =
+    segmentation.activeSegmentation.getActiveSegmentation(toolGroupId);
+  // Get active segmentation representation
+  const activeSegmentationRepresentation =
+    segmentation.activeSegmentation.getActiveSegmentationRepresentation(
+      toolGroupId
+    );
+  const color = segmentation.state.getColorLUT(
+    activeSegmentationRepresentation.colorLUTIndex
+  );
+
+  if (!activeSegmentation || !activeSegmentationRepresentation) {
+    return;
+  }
+
+  //
+  const labelmap =
+    activeSegmentation.representationData[
+      csToolsEnums.SegmentationRepresentations.Labelmap
+    ];
+
+  //
+  if (labelmap.imageIdReferenceMap) {
+    //
+    labelmap.imageIdReferenceMap.forEach(
+      (derivedImagesId: string, imagesId: string) => {
+        const cacheImage = cache.getImage(imagesId);
+        const cacheSegmentationImage = cache.getImage(derivedImagesId);
+
+        const pixelData = cacheSegmentationImage.getPixelData();
+        const canvasElement = document.createElement('canvas');
+
+        canvasElement.width = cacheImage.width;
+        canvasElement.height = cacheImage.height;
+
+        const ctx = canvasElement.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // Image data initialized with all transparent black.
+        const imageData = new ImageData(cacheImage.width, cacheImage.height);
+        const data = imageData.data;
+
+        const index = segmentationIds.indexOf(
+          activeSegmentation.segmentationId
+        );
+
+        for (let i = 0; i < pixelData.length; i++) {
+          const segmentIndex = pixelData[i];
+
+          const _color = color[index + 1];
+          if (segmentIndex) {
+            // Modify ImageData.
+            data[4 * i] = _color[0]; // R value
+            data[4 * i + 1] = _color[1]; // G value
+            data[4 * i + 2] = _color[2]; // B value
+            data[4 * i + 3] = _color[3]; // A value
+          }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        let url = canvasElement.toDataURL('image/png');
+        url = url.split('data:image/png;base64,')[1];
+        console.log(url, url);
+      }
+    );
+  }
+}
+addButtonToToolbar({
+  title: 'Get Current Image Data',
+  onClick: async () => {
+    exportSegmentation();
   },
 });
 
@@ -402,7 +476,7 @@ async function run() {
   toolGroup.addViewport(viewportId, renderingEngineId);
   viewport = renderingEngine.getViewport(viewportId);
 
-  const imageIdsArray = [imageIds[0], imageIds[1], mgImageIds[0]];
+  const imageIdsArray = [imageIds[0]];
 
   const { imageIds: segmentationImageIds } =
     await imageLoader.createAndCacheDerivedSegmentationImages(imageIdsArray);

@@ -20,6 +20,8 @@ import {
     setTitleAndDescription
 } from "../../../../utils/demo/helpers";
 
+import * as mockdata from "./test.json";
+
 // This is for debugging purposes
 console.warn(
     "Click on index.ts to open source code for this example --------->"
@@ -254,7 +256,10 @@ async function readSegmentation(file: File) {
     loadSegmentation(arrayBuffer);
 }
 
-async function loadSegmentation(arrayBuffer: ArrayBuffer) {
+async function loadSegmentation() {
+    if (!imageIds.length) {
+        return;
+    }
     // Generate segmentation id
     const newSegmentationId = "LOAD_SEG_ID:" + csUtilities.uuidv4();
     // Add some segmentations based on the source data stack
@@ -262,10 +267,10 @@ async function loadSegmentation(arrayBuffer: ArrayBuffer) {
     // Update the dropdown
     updateSegmentationDropdown(newSegmentationId);
 
-    //
+    const data = require("./test.json");
     const localImage = imageLoader.createAndCacheLocalImage(
         {
-            scalarData: new Uint8Array(arrayBuffer)
+            scalarData: new Uint8Array(data.users)
         },
         derivedImages.imageIds[0],
         true
@@ -439,15 +444,15 @@ addUploadToToolbar({
     input: inputConfig
 });
 
-addUploadToToolbar({
+addButtonToToolbar({
     id: "IMPORT_SEGMENTATION",
     title: "Import SEG",
     style: {
         marginRight: "5px"
     },
-    onChange: importSegmentation,
-    container: group2,
-    input: inputConfig
+    onClick: loadSegmentation,
+    container: group1
+    // input: inputConfig
 });
 
 addButtonToToolbar({
